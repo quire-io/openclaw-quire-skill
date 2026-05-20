@@ -64,14 +64,23 @@ directly.
 ## Development
 
 The skill is plain Markdown — no build step, no tests beyond manifest
-validation.
+validation. CI runs the validator on every PR (see
+[`.github/workflows/validate.yml`](.github/workflows/validate.yml)); run
+it locally with:
 
 ```bash
-# Validate frontmatter and that every documented `quire ...` command
-# resolves against the installed CLI:
-.github/scripts/validate.sh   # added in a follow-up PR
+bash .github/scripts/validate.sh
+```
 
-# Dry-run publish to ClawHub (does not actually publish):
+The validator parses every `quire ...` invocation out of SKILL.md's bash
+code fences and asserts each one resolves against the installed CLI's
+`--help` output. If you add a new tool section, the CI catches it
+automatically — no separate manifest to keep in sync.
+
+Before a ClawHub release, also run a dry-run publish (not in CI yet
+because it needs ClawHub credentials):
+
+```bash
 clawhub skill publish . --slug quire --dry-run
 ```
 
