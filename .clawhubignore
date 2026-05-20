@@ -1,0 +1,15 @@
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+node_modules/
+*.log
+
+# Editor and OS scratch
+*.swp
+*~
+
+# Local-only assets
+screenshots/
+scratch/
