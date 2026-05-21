@@ -1,7 +1,7 @@
 ---
 name: quire
 description: Read tasks, projects, and task trees from Quire via the quire CLI.
-version: 0.1.2
+version: 0.1.3
 metadata:
   openclaw:
     requires:
@@ -291,10 +291,19 @@ After resolving, you typically already have the full object — no follow-up
 9. **Free Quire plans restrict org-wide scope.** `quire mine --all-orgs`,
    `quire mine --org`, `quire task search --org`, and `quire task search --folder`
    return error **469** ("Quire quota exceeded … isn't supported on the free
-   plan") when the signed-in user is on a free plan. If you hit 469, retry
-   with a per-project scope (e.g. `quire mine --project <id> --json`) and tell
-   the user the limitation. If you don't know which project, call
-   `list_projects` first and either pick the obvious one or ask the user.
+   plan") when the signed-in user is on a free plan. **Recovery — fan out
+   per project, which IS allowed on free:**
+   1. Call `list_projects` (no scope) to enumerate every project the user
+      can see. This works on free.
+   2. If the project count is ≤ 10, call `list_my_tasks --project <id>` for
+      each project and concatenate the results. Mention to the user that
+      you fanned out because cross-org scope isn't available on their plan.
+   3. If the project count is > 10, do **not** fan out blindly — ask the
+      user which subset of projects (or which org) to check. Blanket
+      fan-out across many projects risks API rate limits.
+
+   Same pattern applies to `task search`: if `--org` / `--folder` is blocked,
+   loop the search over `--project <id>` for the projects you care about.
 
 ## Authentication failures
 
