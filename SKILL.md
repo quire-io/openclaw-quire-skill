@@ -1,7 +1,7 @@
 ---
 name: quire
 description: Read and modify Quire tasks, projects, comments, statuses, and tags via the quire CLI — list, search, get, create, update, complete/uncomplete, set dates, comment.
-version: 0.3.0
+version: 0.3.1
 metadata:
   openclaw:
     requires:
@@ -38,20 +38,21 @@ Invoke when the user asks anything along the lines of:
 - "Show me the subtree of task #408."
 - "Summarize this Quire URL: …"
 - "Who's on the Marketing project?"
+- "Create a task / update task / set due date / mark complete or re-open /
+  post a comment" — the six supported writes are `create_task`,
+  `update_task`, `set_task_dates`, `complete_task`, `uncomplete_task`,
+  and `add_comment`.
 
 ## When NOT to use this skill
 
 - Questions about Notion, Asana, Linear, Jira, Todoist, or any tracker other
   than Quire — even if the phrasing is similar. Pick the skill that matches
   the user's tool, not this one.
-- Writes **outside** the supported set. Supported writes:
-  `create_task`, `update_task`, `set_task_dates`, `complete_task`,
-  `uncomplete_task`, `add_comment`. Everything else is deferred —
-  including deleting tasks or comments, attaching files, moving or
-  transferring tasks across projects, editing comments, managing
-  tags/statuses/sublists, and approval workflows. If asked for an
-  unsupported write, decline politely and tell the user it isn't in
-  this skill's surface yet.
+- Heavier writes that aren't in this skill's surface yet — deleting tasks
+  or comments, attaching files, moving or transferring tasks across
+  projects, editing comments, managing tags/statuses/sublists, and
+  approval workflows. If asked for one of these, decline politely and
+  tell the user it isn't in this skill's surface yet.
 - General productivity advice, planning, or coaching with no concrete need
   to read live Quire data.
 

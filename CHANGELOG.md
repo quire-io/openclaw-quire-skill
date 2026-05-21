@@ -9,6 +9,20 @@ ClawHub publishes).
 
 (nothing yet)
 
+## [0.3.1] — 2026-05-21
+
+### Changed
+
+- "When NOT to use this skill" no longer lists the supported writes
+  inside its bullet — the phrasing read backwards on ClawHub, since
+  readers skimming the negative section saw supported writes there
+  and assumed they were unsupported. The six supported writes
+  (`create_task`, `update_task`, `set_task_dates`, `complete_task`,
+  `uncomplete_task`, `add_comment`) now live in "When to use"; the
+  negative section enumerates only the deferred writes (delete,
+  attach, move/transfer, comment edit, tags/statuses/sublists,
+  approval).
+
 ## [0.3.0] — 2026-05-21
 
 ### Added
@@ -123,7 +137,8 @@ assumed plural `tasks`/`projects` subcommands and a `--mine` flag on
 top-level, and `whoami` + `resolve_url` were added for cheap
 chat-surface wins.
 
-[Unreleased]: https://github.com/quire-io/openclaw-quire-skill/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/quire-io/openclaw-quire-skill/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.3.1
 [0.3.0]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.3.0
 [0.2.0]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.2.0
 [0.1.3]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.1.3
