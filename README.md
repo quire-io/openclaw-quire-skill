@@ -1,11 +1,14 @@
 # openclaw-quire-skill
 
 An [OpenClaw](https://openclaw.dev) skill that lets chat agents read tasks,
-projects, and task trees from [Quire](https://quire.io) by shelling out to
-the [`quire`](https://github.com/quire-io/quire-cli) CLI.
+projects, and task trees from [Quire](https://quire.io) — and update
+existing tasks — by shelling out to the
+[`quire`](https://github.com/quire-io/quire-cli) CLI.
 
-This is a read-only v0.1 surface. Writes (create / update / complete tasks)
-are deferred to a later version.
+Read-heavy with four light-write tools landing in v0.2: `create_task`,
+`update_task`, `complete_task`, `add_comment`. Heavier writes (delete,
+attach, move/transfer, comment edit, approval workflows) are deferred to
+a later version.
 
 ## Install
 
@@ -32,19 +35,24 @@ No environment variables, no API keys to paste.
 
 ## What the skill exposes
 
-Nine read tools, all backed by `quire <command> --json`:
+Thirteen tools (nine reads, four writes), all backed by
+`quire <command> --json`:
 
-| Tool | Wraps |
-|---|---|
-| `whoami` | `quire whoami` |
-| `list_my_tasks` | `quire mine` |
-| `list_project_tasks` | `quire task list` |
-| `get_task` | `quire task get` |
-| `search_tasks` | `quire task search` |
-| `get_task_tree` | `quire task tree` |
-| `list_projects` | `quire project list` |
-| `get_project` | `quire project get` |
-| `resolve_url` | `quire resolve` |
+| Tool | Wraps | Kind |
+|---|---|---|
+| `whoami` | `quire whoami` | read |
+| `list_my_tasks` | `quire mine` | read |
+| `list_project_tasks` | `quire task list` | read |
+| `get_task` | `quire task get` | read |
+| `search_tasks` | `quire task search` | read |
+| `get_task_tree` | `quire task tree` | read |
+| `list_projects` | `quire project list` | read |
+| `get_project` | `quire project get` | read |
+| `resolve_url` | `quire resolve` | read |
+| `create_task` | `quire task create` | **write** |
+| `update_task` | `quire task update` | **write** |
+| `complete_task` | `quire task complete` | **write** |
+| `add_comment` | `quire comment add` | **write** |
 
 See [`SKILL.md`](SKILL.md) for the full manifest the model reads at install
 time — including when-to-use guidance, common pitfalls, and example prompts.
@@ -84,7 +92,8 @@ clawhub skill publish . --slug quire --owner quire --version <semver>
 ```
 
 Bump `<semver>` for each release — the registry rejects republishing an
-existing version. Add `--changelog "..."` to annotate the release.
+existing version. Add `--changelog "..."` to annotate the release; the
+narrative changelog lives in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## License
 

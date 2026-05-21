@@ -1,7 +1,7 @@
 ---
 name: quire
-description: Read tasks, projects, and task trees from Quire via the quire CLI.
-version: 0.1.3
+description: Read tasks, projects, and task trees from Quire, and create, update, complete, or comment on tasks via the quire CLI.
+version: 0.2.0
 metadata:
   openclaw:
     requires:
@@ -13,9 +13,12 @@ metadata:
 
 # Quire
 
-Read-only access to a user's Quire workspace via the `quire` CLI. Use this skill
-when the user asks about their Quire tasks, projects, comments, or wants to act
-on a Quire URL they've pasted.
+Access to a user's Quire workspace via the `quire` CLI. Reads cover tasks,
+projects, task trees, comments, and URL resolution; writes cover creating
+tasks (`create_task`), updating fields (`update_task`), marking complete
+(`complete_task`), and posting comments (`add_comment`). Use this skill when
+the user asks about their Quire tasks, projects, or comments, wants to act
+on a Quire URL they've pasted, or wants to mutate a task or post a comment.
 
 Authentication is handled by the CLI's own token store (`quire login` runs an
 OAuth loopback flow once per machine). No environment variables or API keys are
@@ -40,9 +43,14 @@ Invoke when the user asks anything along the lines of:
 - Questions about Notion, Asana, Linear, Jira, Todoist, or any tracker other
   than Quire — even if the phrasing is similar. Pick the skill that matches
   the user's tool, not this one.
-- Writes (creating tasks, posting comments, completing tasks, attaching files).
-  This skill is read-only in v0.1. If asked to mutate state, decline politely
-  and tell the user that write support is planned for a later version.
+- Writes **outside** the supported set. Supported writes: create a task
+  (`create_task`), update a task's fields (`update_task`), mark a task
+  complete (`complete_task`), add a comment on a task (`add_comment`).
+  Everything else is deferred — including deleting tasks/comments,
+  attaching files, moving or transferring tasks across projects,
+  re-opening completed tasks (`uncomplete`), editing comments, and
+  approval workflows. If asked for an unsupported write, decline politely
+  and tell the user it isn't in this skill's surface yet.
 - General productivity advice, planning, or coaching with no concrete need
   to read live Quire data.
 
@@ -152,6 +160,193 @@ quire task get <id> --json
   often cleaner — it returns a typed `{kind, resource}` envelope.
 
 **Output:** single task object (raw API shape).
+
+---
+
+## Tool: create_task
+
+**Use for:** creating a new task inside a project (or as a subtask of an
+existing task). The user must have named a destination — don't guess a
+project. If they only said "add a task to remind me…", ask which project
+or offer to put it in their Inbox.
+
+**This is a write.** Restate the task you're about to create — name,
+project (or parent task), assignee, due date, priority — and wait for
+the user's explicit confirmation before invoking.
+
+**Command:**
+```bash
+quire task create <project> --name <name> [--description <text>] [--priority <p>] [--due <date>] [--start <date>] [--assignee <user>] [--tag <tag>] [--parent <id>] [--sibling <id>] [--position <before|after>] [--recurrence-freq <freq>] [--recurrence-interval <n>] [--recurrence-byweekday <days>] [--recurrence-until <date>] --json
+```
+
+**Args:**
+- `<project>` — project OID, slug, or URL. Required even when creating
+  a subtask via `--parent` (the parent's project must match).
+
+**Required flag:**
+- `--name <name>` — the task name. The only mandatory field.
+
+**Common flags:**
+- `--description <text>` — task body.
+- `--priority <low|medium|high|urgent>`.
+- `--due <date>`, `--start <date>` — `YYYY-MM-DD` or ISO 8601.
+- `--assignee <user>` — OID, numeric id, or email. Repeat for multiple.
+- `--tag <tag>` — tag name. Repeat for multiple.
+
+**Positioning flags:**
+- `--parent <id>` — create as a subtask of this parent task.
+- `--sibling <id>` plus `--position before|after` — place the new task
+  adjacent to an existing sibling. Use one positioning approach, not both.
+
+**Recurrence flags:** same as `update_task` (`--recurrence-freq`,
+`--recurrence-interval`, `--recurrence-byweekday`, `--recurrence-until`).
+
+**Output:** the new task object (same shape as `get_task`).
+
+**Examples:**
+```bash
+quire task create marketing-launch --name "Draft Q3 announcement" --due 2026-06-01 --assignee jane@acme.com --json
+quire task create marketing-launch --name "Write social copy" --parent marketing/#408 --json
+quire task create marketing-launch --name "Daily standup notes" --recurrence-freq daily --recurrence-interval 1 --json
+```
+
+---
+
+## Tool: update_task
+
+**Use for:** modifying fields on an existing task — renaming, editing
+description, changing status or priority, setting/clearing dates, adding or
+removing tags, reassigning, managing successors, setting custom-field
+values, or configuring recurrence. Pass **only** the flags the user asked
+to change; omitted flags leave existing values alone.
+
+**This is a write.** Before invoking, restate the change in plain language
+("Change priority of `#408 Launch site` from high to urgent — confirm?")
+and wait for the user's explicit go-ahead. If you fetched the task with
+`get_task` first to ground the diff, mention what's changing from/to.
+Do not chain multiple updates in a single turn without re-confirming.
+
+**Command:**
+```bash
+quire task update <id> [--name <name>] [--description <text>] [--status <0-100>] [--priority <p>] [--due <date>] [--start <date>] [--add-tag <tag>] [--remove-tag <tag>] [--add-assignee <user>] [--remove-assignee <user>] [--add-successor <id>] [--remove-successor <id>] [--custom-field key=value] [--recurrence-freq <freq>] [--recurrence-interval <n>] [--recurrence-byweekday <days>] [--recurrence-until <date>] --json
+```
+
+**Args:**
+- `<id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Field flags (pass only what you're changing):**
+- `--name <name>` — new task name. Replaces outright.
+- `--description <text>` — new description body. Replaces outright.
+- `--status <0-100>` — numeric workflow status. `0` = active, `100` =
+  complete; projects can define custom statuses in between. If the user
+  names a status ("blocked", "in review"), call
+  `quire status list <project> --json` first to resolve the numeric value.
+  To mark a task complete, prefer `quire task complete` (not in this skill's
+  surface yet) over `--status 100` so the user gets the right semantics.
+- `--priority <low|medium|high|urgent>`.
+- `--due <date>`, `--start <date>` — ISO 8601 / `YYYY-MM-DD`. Pass the
+  literal string `null` to clear a date.
+- `--add-tag <tag>` / `--remove-tag <tag>` — repeat for multiple. Tags are
+  matched by name within the task's project.
+- `--add-assignee <user>` / `--remove-assignee <user>` — accepts OID,
+  numeric id, or email. Repeat for multiple users.
+- `--add-successor <id>` / `--remove-successor <id>` — manage cross-task
+  dependencies (this task blocks `<id>`).
+- `--custom-field key=value` — repeat for multiple. `key` matches the
+  custom field's name in the task's project.
+
+**Recurrence flags (set together when adding/changing recurrence):**
+- `--recurrence-freq <daily|weekly|monthly|yearly>`
+- `--recurrence-interval <n>` — positive integer, every N freq-units.
+- `--recurrence-byweekday <days>` — comma-separated day numbers `0`–`6`
+  (`0` = Sunday). Only meaningful with `--recurrence-freq weekly`.
+- `--recurrence-until <date>` — end date for the recurrence.
+
+**Output:** the updated task object (same shape as `get_task`).
+
+**Examples:**
+```bash
+quire task update marketing/#408 --priority urgent --add-assignee jane@acme.com --json
+quire task update marketing/#408 --due null --remove-tag backlog --json
+quire task update 0e0123abc --status 30 --due 2026-06-01 --json
+```
+
+> If the user is **only** changing dates, `quire task dates <id>` is a
+> smaller-surface alternative (not exposed by this skill yet). To mark
+> a task done, use `complete_task` (below) rather than `--status 100`
+> — both write to the same field, but `complete_task` is what users
+> expect to see in the diff.
+
+---
+
+## Tool: complete_task
+
+**Use for:** marking a task complete. Prefer this over
+`update_task --status 100` — same effect, clearer intent.
+
+**This is a write.** Restate the task ("Mark `#408 Launch site` complete
+— confirm?") and wait for explicit confirmation. If the user says
+something ambiguous like "wrap that up," confirm before assuming they
+mean "complete."
+
+**Command:**
+```bash
+quire task complete <id> --json
+```
+
+**Args:**
+- `<id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Output:** the updated task object (status now reflects the project's
+"complete" state).
+
+**Example:**
+```bash
+quire task complete marketing/#408 --json
+```
+
+> To re-open a completed task, the CLI has `quire task uncomplete <id>`
+> — not exposed by this skill yet. If asked, decline and tell the user
+> they can run it directly, or fall back to `update_task --status 0`.
+
+---
+
+## Tool: add_comment
+
+**Use for:** posting a comment on a task. Comments are visible to
+everyone with access to the task — treat them as you would a public Slack
+message.
+
+**This is a write.** Restate the task and the exact comment text — quote
+it verbatim — and wait for explicit confirmation. Don't paraphrase: the
+user is on the hook for the wording. If they gave you a summary ("tell
+the team the deploy slipped"), draft the comment, show it back, and ask
+them to approve or edit before sending.
+
+**Command:**
+```bash
+quire comment add <task-id> --text <text> --json
+```
+
+**Args:**
+- `<task-id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Flag:**
+- `--text <text>` — the comment body. Plain string works for short
+  content. For long content, `--text @/path/to/file.md` reads from disk
+  and `--text -` reads from stdin. Newlines and Markdown are preserved.
+
+**Output:** the new comment object (`oid`, `text`, `author`, `created`,
+`task`, …).
+
+**Example:**
+```bash
+quire comment add marketing/#408 --text "Pushing the launch to Monday — Jane is OOO Friday." --json
+```
+
+> Comment **editing** (`quire comment update <oid> --text …`) and
+> **deletion** (`quire comment delete <oid>`) are not exposed by this
+> skill. If asked, decline and point the user at the CLI directly.
 
 ---
 
