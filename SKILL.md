@@ -1,7 +1,7 @@
 ---
 name: quire
-description: Read tasks, projects, and task trees from Quire, and create, update, complete, or comment on tasks via the quire CLI.
-version: 0.2.0
+description: Read and modify Quire tasks, projects, comments, statuses, and tags via the quire CLI — list, search, get, create, update, complete/uncomplete, set dates, comment.
+version: 0.3.0
 metadata:
   openclaw:
     requires:
@@ -13,12 +13,13 @@ metadata:
 
 # Quire
 
-Access to a user's Quire workspace via the `quire` CLI. Reads cover tasks,
-projects, task trees, comments, and URL resolution; writes cover creating
-tasks (`create_task`), updating fields (`update_task`), marking complete
-(`complete_task`), and posting comments (`add_comment`). Use this skill when
-the user asks about their Quire tasks, projects, or comments, wants to act
-on a Quire URL they've pasted, or wants to mutate a task or post a comment.
+Access to a user's Quire workspace via the `quire` CLI. Reads cover tasks
+(list, get, search, subtasks, tree), task comments, projects, project
+statuses and tags, and URL resolution. Writes cover creating tasks,
+updating task fields, setting/clearing task dates, marking
+complete/uncomplete, and posting comments. Use this skill when the user
+asks about their Quire tasks, projects, or comments, wants to act on a
+Quire URL they've pasted, or wants to mutate a task or post a comment.
 
 Authentication is handled by the CLI's own token store (`quire login` runs an
 OAuth loopback flow once per machine). No environment variables or API keys are
@@ -43,14 +44,14 @@ Invoke when the user asks anything along the lines of:
 - Questions about Notion, Asana, Linear, Jira, Todoist, or any tracker other
   than Quire — even if the phrasing is similar. Pick the skill that matches
   the user's tool, not this one.
-- Writes **outside** the supported set. Supported writes: create a task
-  (`create_task`), update a task's fields (`update_task`), mark a task
-  complete (`complete_task`), add a comment on a task (`add_comment`).
-  Everything else is deferred — including deleting tasks/comments,
-  attaching files, moving or transferring tasks across projects,
-  re-opening completed tasks (`uncomplete`), editing comments, and
-  approval workflows. If asked for an unsupported write, decline politely
-  and tell the user it isn't in this skill's surface yet.
+- Writes **outside** the supported set. Supported writes:
+  `create_task`, `update_task`, `set_task_dates`, `complete_task`,
+  `uncomplete_task`, `add_comment`. Everything else is deferred —
+  including deleting tasks or comments, attaching files, moving or
+  transferring tasks across projects, editing comments, managing
+  tags/statuses/sublists, and approval workflows. If asked for an
+  unsupported write, decline politely and tell the user it isn't in
+  this skill's surface yet.
 - General productivity advice, planning, or coaching with no concrete need
   to read live Quire data.
 
@@ -239,10 +240,11 @@ quire task update <id> [--name <name>] [--description <text>] [--status <0-100>]
 - `--description <text>` — new description body. Replaces outright.
 - `--status <0-100>` — numeric workflow status. `0` = active, `100` =
   complete; projects can define custom statuses in between. If the user
-  names a status ("blocked", "in review"), call
-  `quire status list <project> --json` first to resolve the numeric value.
-  To mark a task complete, prefer `quire task complete` (not in this skill's
-  surface yet) over `--status 100` so the user gets the right semantics.
+  names a status ("blocked", "in review"), call `list_statuses` first to
+  resolve the numeric value. To mark a task complete, prefer
+  `complete_task` over `--status 100` — same effect, clearer intent.
+  Same for "add a tag" — call `list_tags` first if the user names a
+  tag you haven't seen, so you spell it the way the project does.
 - `--priority <low|medium|high|urgent>`.
 - `--due <date>`, `--start <date>` — ISO 8601 / `YYYY-MM-DD`. Pass the
   literal string `null` to clear a date.
@@ -271,11 +273,44 @@ quire task update marketing/#408 --due null --remove-tag backlog --json
 quire task update 0e0123abc --status 30 --due 2026-06-01 --json
 ```
 
-> If the user is **only** changing dates, `quire task dates <id>` is a
-> smaller-surface alternative (not exposed by this skill yet). To mark
-> a task done, use `complete_task` (below) rather than `--status 100`
-> — both write to the same field, but `complete_task` is what users
-> expect to see in the diff.
+> If the user is **only** changing dates, `set_task_dates` (below) is a
+> smaller-surface alternative — same effect for dates, narrower diff.
+> To mark a task done, use `complete_task` (below) rather than
+> `--status 100`.
+
+---
+
+## Tool: set_task_dates
+
+**Use for:** setting or clearing **only** a task's `start` or `due` date.
+Prefer this over `update_task` when dates are the only change — the diff
+is smaller, the safety conversation is shorter, and there's no risk of
+accidentally touching other fields.
+
+**This is a write.** Restate the change ("Set due of `#408 Launch site`
+to 2026-06-01 — confirm?") and wait for explicit confirmation. Clearing
+a date is also a real change worth confirming.
+
+**Command:**
+```bash
+quire task dates <id> [--start <date>] [--due <date>] --json
+```
+
+**Args:**
+- `<id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Flags (pass at least one):**
+- `--start <date>` — ISO 8601 / `YYYY-MM-DD`, or the literal string
+  `null` to clear the start date.
+- `--due <date>` — same shape; pass `null` to clear.
+
+**Output:** the updated task object (same shape as `get_task`).
+
+**Examples:**
+```bash
+quire task dates marketing/#408 --due 2026-06-01 --json
+quire task dates marketing/#408 --start null --due null --json
+```
 
 ---
 
@@ -305,9 +340,34 @@ quire task complete <id> --json
 quire task complete marketing/#408 --json
 ```
 
-> To re-open a completed task, the CLI has `quire task uncomplete <id>`
-> — not exposed by this skill yet. If asked, decline and tell the user
-> they can run it directly, or fall back to `update_task --status 0`.
+> To re-open a completed task, use `uncomplete_task` (below) — the natural
+> pair with `complete_task`.
+
+---
+
+## Tool: uncomplete_task
+
+**Use for:** re-opening a task that was previously completed. Resets the
+task's status to `0` (active). Natural pair with `complete_task`.
+
+**This is a write.** Restate the task ("Re-open `#408 Launch site` —
+confirm?") and wait for explicit confirmation. Re-opening is a real
+state change others can see on the task; don't do it silently.
+
+**Command:**
+```bash
+quire task uncomplete <id> --json
+```
+
+**Args:**
+- `<id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Output:** the updated task object (status now `0`).
+
+**Example:**
+```bash
+quire task uncomplete marketing/#408 --json
+```
 
 ---
 
@@ -347,6 +407,31 @@ quire comment add marketing/#408 --text "Pushing the launch to Monday — Jane i
 > Comment **editing** (`quire comment update <oid> --text …`) and
 > **deletion** (`quire comment delete <oid>`) are not exposed by this
 > skill. If asked, decline and point the user at the CLI directly.
+
+---
+
+## Tool: list_task_comments
+
+**Use for:** "what's been said about this task?" Pulls every comment on
+a task in chronological order. Use this before drafting a reply with
+`add_comment` so the comment lands in context.
+
+**Command:**
+```bash
+quire comment list <task-id> --json
+```
+
+**Args:**
+- `<task-id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Output:** array of comment objects (`oid`, `text`, `author`,
+`created`, `pinned`, `task`, …). Author is a full user object — refer
+to people by `nameText`, not by OID.
+
+**Example:**
+```bash
+quire comment list marketing/#408 --json
+```
 
 ---
 
@@ -412,6 +497,37 @@ quire task tree <id> [--depth <n>] --json
 `tasks` array of children, and an optional `cropped: true` flag when the
 depth cut off further children.
 
+> For just one level of children (no grandchildren), `list_subtasks` is
+> cheaper and easier to summarize.
+
+---
+
+## Tool: list_subtasks
+
+**Use for:** **direct** children of a task only — one level deep, no
+grandchildren. Use this when the user asks "what's under #408?" and
+doesn't need the recursive tree. Cheaper and easier to summarize than
+`get_task_tree` for narrow questions.
+
+**Command:**
+```bash
+quire task subtasks <id> [--limit <n>] [--cursor <token>] --json
+```
+
+**Args:**
+- `<id>` — task OID, `project-slug/#408`, or full Quire task URL.
+
+**Flags:**
+- `--limit <n>` — page size.
+- `--cursor <token>` — pass the cursor from a previous page to continue.
+
+**Output:** array of task objects (same shape as `list_project_tasks`).
+
+**Example:**
+```bash
+quire task subtasks marketing/#408 --json
+```
+
 ---
 
 ## Tool: list_projects
@@ -440,6 +556,57 @@ quire project get <id> --json
 ```
 
 **Output:** single project object.
+
+---
+
+## Tool: list_statuses
+
+**Use for:** resolving a status the user named ("blocked", "in review")
+to the numeric value that `update_task --status` accepts. Each project
+defines its own workflow statuses between `0` (active) and `100`
+(complete) — the numbers aren't standardized across projects, so always
+look them up for the specific project before passing a number.
+
+**Command:**
+```bash
+quire status list <project> --json
+```
+
+**Args:**
+- `<project>` — project OID, slug, or URL.
+
+**Output:** array of status objects (`oid`, `name`, `value`, `color`, …).
+Match by case-insensitive `name`; pass the `value` to `update_task`.
+
+**Example:**
+```bash
+quire status list marketing-launch --json
+```
+
+---
+
+## Tool: list_tags
+
+**Use for:** discovering the tag vocabulary on a project before passing
+`--add-tag` / `--remove-tag` (in `update_task`) or `--tag` (in
+`create_task`). Tags are matched by exact name, so the user's casual
+spelling ("backend") may not match the project's actual tag ("Backend"
+or "back-end"). Look up first, spell it the way the project does.
+
+**Command:**
+```bash
+quire tag list <project> --json
+```
+
+**Args:**
+- `<project>` — project OID, slug, or URL.
+
+**Output:** array of tag objects (`oid`, `name`, `color`, …).
+
+**Example:**
+```bash
+quire tag list marketing-launch --json
+```
 
 ---
 

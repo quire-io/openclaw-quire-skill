@@ -5,10 +5,12 @@ projects, and task trees from [Quire](https://quire.io) — and update
 existing tasks — by shelling out to the
 [`quire`](https://github.com/quire-io/quire-cli) CLI.
 
-Read-heavy with four light-write tools landing in v0.2: `create_task`,
-`update_task`, `complete_task`, `add_comment`. Heavier writes (delete,
-attach, move/transfer, comment edit, approval workflows) are deferred to
-a later version.
+v0.3 adds six gap-filler tools — four reads (`list_subtasks`,
+`list_task_comments`, `list_statuses`, `list_tags`) and two writes
+(`set_task_dates`, `uncomplete_task`) — bringing the curated surface to
+13 reads and 6 writes. Heavier writes (delete, attach, move/transfer,
+comment edit, approval workflows) stay deferred; full CLI coverage is
+the future `quire mcp` server's job, not this skill's.
 
 ## Install
 
@@ -35,7 +37,7 @@ No environment variables, no API keys to paste.
 
 ## What the skill exposes
 
-Thirteen tools (nine reads, four writes), all backed by
+Nineteen tools (thirteen reads, six writes), all backed by
 `quire <command> --json`:
 
 | Tool | Wraps | Kind |
@@ -44,14 +46,20 @@ Thirteen tools (nine reads, four writes), all backed by
 | `list_my_tasks` | `quire mine` | read |
 | `list_project_tasks` | `quire task list` | read |
 | `get_task` | `quire task get` | read |
-| `search_tasks` | `quire task search` | read |
+| `list_subtasks` | `quire task subtasks` | read |
 | `get_task_tree` | `quire task tree` | read |
+| `search_tasks` | `quire task search` | read |
+| `list_task_comments` | `quire comment list` | read |
 | `list_projects` | `quire project list` | read |
 | `get_project` | `quire project get` | read |
+| `list_statuses` | `quire status list` | read |
+| `list_tags` | `quire tag list` | read |
 | `resolve_url` | `quire resolve` | read |
 | `create_task` | `quire task create` | **write** |
 | `update_task` | `quire task update` | **write** |
+| `set_task_dates` | `quire task dates` | **write** |
 | `complete_task` | `quire task complete` | **write** |
+| `uncomplete_task` | `quire task uncomplete` | **write** |
 | `add_comment` | `quire comment add` | **write** |
 
 See [`SKILL.md`](SKILL.md) for the full manifest the model reads at install

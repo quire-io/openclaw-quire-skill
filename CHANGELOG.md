@@ -9,6 +9,54 @@ ClawHub publishes).
 
 (nothing yet)
 
+## [0.3.0] — 2026-05-21
+
+### Added
+
+Six gap-filler tools — the curated expansion that rounds out the
+read+light-write surface without going to full CLI coverage (see the
+skill's stopgap framing in
+[zkoss/boeneo#24746](https://github.com/zkoss/boeneo/issues/24746);
+"all 90 subcommands" is the MCP server's job, not this skill's).
+
+Reads:
+
+- `list_subtasks` — wraps `quire task subtasks`. One level of direct
+  children only; cheaper than `get_task_tree` for narrow "what's under
+  #408?" questions.
+- `list_task_comments` — wraps `quire comment list`. Pulls a task's
+  discussion in chronological order; pair with `add_comment` to draft
+  replies in context.
+- `list_statuses` — wraps `quire status list`. Resolves named statuses
+  (e.g. "blocked", "in review") to the numeric value `update_task
+  --status` expects. Each project defines its own status values, so
+  always look up per-project.
+- `list_tags` — wraps `quire tag list`. Discovers the project's tag
+  vocabulary so `--add-tag` matches existing spellings.
+
+Writes (each with the same restate-and-confirm safety paragraph as the
+0.2.0 writes):
+
+- `set_task_dates` — wraps `quire task dates`. Date-only edit; narrower
+  diff and shorter safety conversation than `update_task` for
+  date-only changes. Pass `null` to clear.
+- `uncomplete_task` — wraps `quire task uncomplete`. Re-opens a
+  completed task (status → 0). Natural pair with `complete_task`.
+
+### Changed
+
+- `update_task` section now points at `list_statuses` / `list_tags` for
+  resolving named statuses/tags instead of asking the model to call the
+  raw CLI command. Removed two stale "(not in this skill's surface
+  yet)" notes for commands that now have proper tool sections.
+- `get_task_tree` and `complete_task` cross-link to their new lighter
+  alternatives (`list_subtasks`, `uncomplete_task`).
+- Frontmatter `description` rewritten to enumerate the broader surface.
+- "When NOT to use this skill" deferred-writes list narrowed:
+  uncomplete is no longer deferred; date-only edits no longer require
+  the full `update_task` ceremony.
+- README tool table grew to 19 rows (13 reads, 6 writes).
+
 ## [0.2.0] — 2026-05-21
 
 ### Added
@@ -75,6 +123,7 @@ assumed plural `tasks`/`projects` subcommands and a `--mine` flag on
 top-level, and `whoami` + `resolve_url` were added for cheap
 chat-surface wins.
 
-[Unreleased]: https://github.com/quire-io/openclaw-quire-skill/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/quire-io/openclaw-quire-skill/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.3.0
 [0.2.0]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.2.0
 [0.1.3]: https://github.com/quire-io/openclaw-quire-skill/releases/tag/v0.1.3
