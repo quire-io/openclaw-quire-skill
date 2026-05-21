@@ -18,12 +18,6 @@ the future `quire mcp` server's job, not this skill's.
 openclaw skills install quire
 ```
 
-Or, from a local clone:
-
-```bash
-openclaw skills install ./openclaw-quire-skill
-```
-
 ## Prerequisites
 
 - [`quire` CLI](https://github.com/quire-io/quire-cli) on `$PATH`.
