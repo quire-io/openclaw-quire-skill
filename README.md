@@ -18,6 +18,8 @@ the future `quire mcp` server's job, not this skill's.
 openclaw skills install quire
 ```
 
+View on ClawHub: [clawhub.ai/quire/quire](https://clawhub.ai/quire/quire)
+
 ## Prerequisites
 
 - [`quire` CLI](https://github.com/quire-io/quire-cli) on `$PATH`.
