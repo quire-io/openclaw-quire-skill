@@ -1,7 +1,7 @@
 ---
 name: quire
 description: Read tasks, projects, and task trees from Quire via the quire CLI.
-version: 0.1.0
+version: 0.1.2
 metadata:
   openclaw:
     requires:
@@ -288,6 +288,13 @@ After resolving, you typically already have the full object — no follow-up
 8. **Rate limits exist.** Avoid fan-out loops that call `get_task` over
    hundreds of tasks in a single turn. Prefer `task tree` or `task list` to
    pull many tasks in one request.
+9. **Free Quire plans restrict org-wide scope.** `quire mine --all-orgs`,
+   `quire mine --org`, `quire task search --org`, and `quire task search --folder`
+   return error **469** ("Quire quota exceeded … isn't supported on the free
+   plan") when the signed-in user is on a free plan. If you hit 469, retry
+   with a per-project scope (e.g. `quire mine --project <id> --json`) and tell
+   the user the limitation. If you don't know which project, call
+   `list_projects` first and either pick the obvious one or ask the user.
 
 ## Authentication failures
 

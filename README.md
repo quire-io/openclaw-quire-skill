@@ -77,12 +77,14 @@ code fences and asserts each one resolves against the installed CLI's
 `--help` output. If you add a new tool section, the CI catches it
 automatically — no separate manifest to keep in sync.
 
-Before a ClawHub release, also run a dry-run publish (not in CI yet
-because it needs ClawHub credentials):
+Publishing to ClawHub (requires `clawhub login` first):
 
 ```bash
-clawhub skill publish . --slug quire --dry-run
+clawhub skill publish . --slug quire --owner quire --version <semver>
 ```
+
+Bump `<semver>` for each release — the registry rejects republishing an
+existing version. Add `--changelog "..."` to annotate the release.
 
 ## License
 
